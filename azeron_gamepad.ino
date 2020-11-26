@@ -5,6 +5,10 @@
    https://www.instructables.com/id/Azeron-Game-Pad-DIY-Under-35/
    JerkWagon & Anon Engineering @Discord 9/2020
    Rev. 091620vs
+
+   Updated by onebehler to support diagonal movement
+   Original code and variable use of lastKeyPressed should probably be used in some
+   of an array to allow for other buttons to not lose status
 */
 
 //#define DEBUG // Comment out for Keyboard, uncomment for Serial debugging
@@ -13,6 +17,7 @@
 #define KEY_BEGIN()
 #define KEY_PRESS(x)
 #define KEY_RELEASE(x)
+#define KEY_RELEASE_ALL  //More support for diagonal movement
 #define DEBUG_PRINT(x) Serial.print(x)
 #define DEBUG_PRINTLN(x) Serial.println(x)
 // Key constants, numeric values used in DEBUG mode
@@ -56,6 +61,7 @@
 #define KEY_BEGIN() Keyboard.begin()
 #define KEY_PRESS(x) Keyboard.press(x)
 #define KEY_RELEASE(x) Keyboard.release(x)
+#define KEY_RELEASE_ALL Keyboard.releaseAll()  //Support angular movement
 #define DEBUG_PRINT(x)
 #define DEBUG_PRINTLN(x)
 #endif
@@ -73,6 +79,12 @@ const char dPadDn = 's';
 const char dPadLt = 'a';
 const char dPadNone = '0';
 
+// Added in to support diagonal moves for placeholder Not the best use of this but works for now
+const char dPadUpRt = '9999';
+const char dPadDnRt = '9998';
+const char dPadDnLt = '9997';
+const char dPadUpLt = '9996';
+
 typedef struct {
   int pin;
   char cmd;
@@ -81,7 +93,7 @@ typedef struct {
 
 // Switch pins, {PIN, KEY, False}
 dKey dSwitch[] = {
-  {19, 'u', false}, // Pin 19 = A1
+  {21, KEY_ESC, false}, // Pin 19 = A1
   {2, KEY_LEFT_SHIFT, false},
   {3, '1', false},
   {4, 'f', false},
@@ -126,9 +138,9 @@ void loop() {
 void readJoystick() {
   float angle = 0.0;
   static char lastKeyPressed = dPadNone;
-  int joyX = analogRead(A2);  // Or A3, rotates 0 angle (0 degrees is full right by default)
-  int joyY = analogRead(A3);  // Or A2, rotates 0 angle
-  double mapJoyX = map(joyX, 0, 1023, 0, 500);
+  int joyX = analogRead(A2);  // Or A3, rotates 0 angle (0 degrees is full right by default)        Changed to support physical pinouts
+  int joyY = analogRead(A1);  // Or A2, rotates 0 angle                                             Changed to support physical pinouts
+  double mapJoyX = map(joyX, 0, 1023, 500, 0);   //Changed to support particular style of joystick use
   double mapJoyY = map(joyY, 0, 1023, 0, 500);
   // For test, use to determine xCenter, yCenter
   //DEBUG_PRINT("Mapped X value: ");
@@ -151,7 +163,8 @@ void readJoystick() {
   if ((mapJoyX <= xCenter + xDeadband && mapJoyX >= xCenter - xDeadband) && (mapJoyY <= yCenter + yDeadband && mapJoyY >= yCenter - yDeadband))  {
     angle = 1000.0;
     if (lastKeyPressed != dPadNone)  {
-      KEY_RELEASE(lastKeyPressed);
+      //KEY_RELEASE(lastKeyPressed);
+      KEY_RELEASE_ALL;
       DEBUG_PRINT("Center: release ");
       DEBUG_PRINTLN(lastKeyPressed);
       lastKeyPressed = dPadNone;
@@ -162,10 +175,11 @@ void readJoystick() {
   }
   //DEBUG_PRINT("Angle: ");
   //DEBUG_PRINTLN(angle);
-  if ((angle >= 45 && angle <= 135)) {  // UP
+  if ((angle >= 67.5 && angle <= 112.5)) {  // UP
     if (lastKeyPressed != dPadUp)  {
       if (lastKeyPressed != dPadNone)  {
-        KEY_RELEASE(lastKeyPressed);
+        //KEY_RELEASE(lastKeyPressed);
+        KEY_RELEASE_ALL;
         DEBUG_PRINT("Release key ");
         DEBUG_PRINTLN(lastKeyPressed);
       }
@@ -175,10 +189,30 @@ void readJoystick() {
       DEBUG_PRINTLN (dPadUp);
     }
   }
-  else if (angle < 45 && angle > -45) {  // RIGHT
+
+// Added to move Up and Right at the same time
+
+  if ((angle >= 22.5 && angle <= 67.5)) {  // UP RIGHT
+    if (lastKeyPressed != dPadUpRt)  {
+      if (lastKeyPressed != dPadNone)  {
+        KEY_RELEASE_ALL;
+        DEBUG_PRINT("Release key ");
+        DEBUG_PRINTLN("UP RT");
+      }
+      lastKeyPressed = dPadUpRt;
+      KEY_PRESS(dPadUp);
+      KEY_PRESS(dPadRt);
+      DEBUG_PRINT("Key pressed: ");
+      DEBUG_PRINTLN (dPadUp);
+      DEBUG_PRINTLN (dPadRt);
+    }
+  }
+  
+  else if (angle < 22.5 && angle > -22.5) {  // RIGHT
     if (lastKeyPressed != dPadRt)  {
       if (lastKeyPressed != dPadNone)  {
-        KEY_RELEASE(lastKeyPressed);
+        //KEY_RELEASE(lastKeyPressed);
+        KEY_RELEASE_ALL;
         DEBUG_PRINT("Release key ");
         DEBUG_PRINTLN(lastKeyPressed);
       }
@@ -188,10 +222,28 @@ void readJoystick() {
       DEBUG_PRINTLN (dPadRt);
     }
   }
-  else if (angle <= -45 && angle >= -135) {  // DOWN
+
+  if ((angle >= -67.5 && angle <= -22.5)) {  // DOWN RIGHT
+    if (lastKeyPressed != dPadDnRt)  {
+      if (lastKeyPressed != dPadNone)  {
+        KEY_RELEASE_ALL;
+        DEBUG_PRINT("Release key ");
+        DEBUG_PRINTLN("DN RT");
+      }
+      lastKeyPressed = dPadDnRt;
+      KEY_PRESS(dPadDn);
+      KEY_PRESS(dPadRt);
+      DEBUG_PRINT("Key pressed: ");
+      DEBUG_PRINTLN (dPadDn);
+      DEBUG_PRINTLN (dPadRt);
+    }
+  }
+  
+  else if (angle <= -67.5 && angle >= -112.5) {  // DOWN
     if (lastKeyPressed != dPadDn)  {
       if (lastKeyPressed != dPadNone)  {
-        KEY_RELEASE(lastKeyPressed);
+        //KEY_RELEASE(lastKeyPressed);
+        KEY_RELEASE_ALL;
         DEBUG_PRINT("Release key ");
         DEBUG_PRINTLN(lastKeyPressed);
       }
@@ -201,10 +253,28 @@ void readJoystick() {
       DEBUG_PRINTLN (dPadDn);
     }
   }
-  else if ((angle < -135 && angle >= -180) || (angle <= 180 && angle > 135))  { // LEFT
+
+  if ((angle >= -157.5 && angle <= -112.5)) {  // DOWN LEFT
+    if (lastKeyPressed != dPadDnLt)  {
+      if (lastKeyPressed != dPadNone)  {
+        KEY_RELEASE_ALL;
+        DEBUG_PRINT("Release key ");
+        DEBUG_PRINTLN("DN LT");
+      }
+      lastKeyPressed = dPadDnLt;
+      KEY_PRESS(dPadDn);
+      KEY_PRESS(dPadLt);
+      DEBUG_PRINT("Key pressed: ");
+      DEBUG_PRINTLN (dPadDn);
+      DEBUG_PRINTLN (dPadLt);
+    }
+  }
+  
+  else if ((angle < -157.5 && angle >= -180) || (angle <= 180 && angle > 157.5))  { // LEFT
     if (lastKeyPressed != dPadLt)  {
       if (lastKeyPressed != dPadNone)  {
-        KEY_RELEASE(lastKeyPressed);
+        //KEY_RELEASE(lastKeyPressed);
+        KEY_RELEASE_ALL;
         DEBUG_PRINT("Release key ");
         DEBUG_PRINTLN(lastKeyPressed);
       }
@@ -214,6 +284,23 @@ void readJoystick() {
       DEBUG_PRINTLN (dPadLt);
     }
   }
+
+  if ((angle >= 112.5 && angle <= 157.5)) {  // UP LEFT
+    if (lastKeyPressed != dPadUpLt)  {
+      if (lastKeyPressed != dPadNone)  {
+        KEY_RELEASE_ALL;
+        DEBUG_PRINT("Release key ");
+        DEBUG_PRINTLN("UP LT");
+      }
+      lastKeyPressed = dPadUpLt;
+      KEY_PRESS(dPadUp);
+      KEY_PRESS(dPadLt);
+      DEBUG_PRINT("Key pressed: ");
+      DEBUG_PRINTLN (dPadUp);
+      DEBUG_PRINTLN (dPadLt);
+    }
+  }
+  
 }
 
 void readKeys() {
